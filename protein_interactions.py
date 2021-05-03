@@ -1,6 +1,7 @@
 from collections import defaultdict
 
 import pandas as pd
+from sklearn.manifold import MDS, SpectralEmbedding, Isomap, TSNE
 
 from graph import get_components, extract_component, floyd_warshall
 
@@ -55,3 +56,18 @@ for k, values in network.items():
 # %% Geodesic distances
 dists = pd.DataFrame(floyd_warshall(adj_matrix.to_numpy()), index=network.keys(), columns=network.keys())
 dists
+
+# %% Manifold Embeddings
+data = dists.to_numpy()
+
+mds = MDS()
+mds.fit(data)
+
+se = SpectralEmbedding()
+se.fit(data)
+
+iso = Isomap()
+iso.fit(data)
+
+tsne = TSNE()
+tsne.fit(data)
