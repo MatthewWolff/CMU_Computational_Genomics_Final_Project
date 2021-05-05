@@ -7,7 +7,7 @@ from graph import get_components, extract_component, floyd_warshall
 
 # https://www.ebi.ac.uk/intact/, searched "ABL"
 # as per https://www.proteinatlas.org/search/protein_class%3ACOSMIC+Somatic+Mutations)
-data = pd.read_table("data.txt")
+data = pd.read_table("../data/data.txt")
 pairs = pd.DataFrame(data[data.columns[:2]].to_numpy(), columns=["protein1", "protein2"])
 
 # %% Exploration
