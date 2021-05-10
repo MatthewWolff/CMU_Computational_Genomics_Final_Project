@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 from mpl_toolkits import mplot3d
+from sklearn.decomposition import PCA
 from sklearn.manifold import MDS, Isomap, TSNE
 
 from graph import get_components, extract_component, floyd_warshall
@@ -106,7 +107,9 @@ def plot_3d(data, title, path: str = None, labels=None):
     ax = plt.axes(projection='3d')
     ax.scatter3D(data[:, 0], data[:, 1], data[:, 2])
     ax.set_title(title)
-    ax.set_xlabel('Component 1'), ax.set_ylabel('Component 2')
+    ax.set_xlabel("Component 1")
+    ax.set_ylabel("Component 2")
+    ax.set_zlabel("Component 3")
 
     if path is not None:
         plt.savefig(path)
@@ -115,7 +118,7 @@ def plot_3d(data, title, path: str = None, labels=None):
         plt.show()
 
 
-# %% Manifold Embeddings
+# %% Manifold Embeddings + PCA
 
 data = dists.to_numpy()
 components = 3
@@ -132,14 +135,19 @@ iso_embedding = iso.fit_transform(data)
 tsne = TSNE(n_components=components)
 tsne_embedding = tsne.fit_transform(data)
 
+pca = PCA(n_components=components)
+pca_reduction = pca.fit_transform(data)
+
 if components == 2:
     plot_2d(mds_embedding, f"MDS Embedding ({components}D)")
     plot_2d(iso_embedding, f"ISOMAP Embedding ({components}D)")
     plot_2d(tsne_embedding, f"t-SNE Embedding ({components}D)")
     # plot_2d(se_embedding, f"Spectral Embedding ({components}D)")
+    plot_2d(pca_reduction, f"PCA Reduction ({components}D)")
 elif components == 3:
     dir(mplot3d)  # use the import once so it doesn't get "optimized" out
     plot_3d(mds_embedding, f"MDS Embedding ({components}D)")
     plot_3d(iso_embedding, f"ISOMAP Embeddinfg ({components}D)")
     plot_3d(tsne_embedding, f"t-SNE Embedding ({components}D)")
     # plot_3d(se_embedding, f"Spectral Embedding ({components}D)")
+    plot_3d(pca_reduction, f"PCA Reduction ({components}D)")
