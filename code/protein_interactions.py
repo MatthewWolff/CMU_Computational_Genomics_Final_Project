@@ -1,4 +1,6 @@
+import re
 from collections import defaultdict
+from os import path, makedirs
 from typing import Dict
 
 import matplotlib.pyplot as plt
@@ -8,8 +10,6 @@ import seaborn as sns
 from mpl_toolkits import mplot3d
 from sklearn.decomposition import PCA
 from sklearn.manifold import MDS, SpectralEmbedding, Isomap, TSNE
-import re
-from os import path, makedirs
 
 from graph import get_components, extract_component, floyd_warshall
 
@@ -109,7 +109,7 @@ def plot_2d(data, title, save_to_dir: str = None, labels=None):
 
 
 def plot_3d(data, title, save_to_dir: str = None, labels=None):
-    assert data.shape[1] == 3, "Shouldn't do 3 component plot with more than 2 components"
+    assert data.shape[1] == 3, "Shouldn't do 3 component plot with more than 3 components"
 
     plt.clf()
     plt.figure()
@@ -122,6 +122,18 @@ def plot_3d(data, title, save_to_dir: str = None, labels=None):
 
     if save_to_dir:
         plt.savefig(path.join(save_to_dir, re.sub("[()-]", "", title).replace(" ", "_").lower()))
+        plt.show()
+    else:
+        plt.show()
+
+
+def plot_component_variance(fitted_pca, save_to_dir: str = None):
+    plt.figure()
+    ax = sns.barplot(x=["Component %d" % d for d in range(fitted_pca.n_components)],
+                     y=fitted_pca.explained_variance_ratio_)
+    ax.set_title("PCA - Proportion of Variance Explained per Component")
+    if save_to_dir:
+        plt.savefig(path.join(save_to_dir, "pca_component_variances"))
         plt.show()
     else:
         plt.show()
@@ -141,6 +153,7 @@ save_to_dir = "../figures"  # None
 if save_to_dir:
     makedirs(save_to_dir, exist_ok=True)
 
+# non-linear assumptions
 mds = MDS(n_components=components)
 mds_embedding = mds.fit_transform(data)
 
@@ -153,8 +166,10 @@ iso_embedding = iso.fit_transform(data)
 tsne = TSNE(n_components=components)
 tsne_embedding = tsne.fit_transform(data)
 
+# linear assumption
 pca = PCA(n_components=components)
 pca_reduction = pca.fit_transform(data)
+plot_component_variance(pca, save_to_dir=save_to_dir)
 
 if components == 2:
     plot = plot_2d
