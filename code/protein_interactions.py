@@ -8,6 +8,8 @@ import seaborn as sns
 from mpl_toolkits import mplot3d
 from sklearn.decomposition import PCA
 from sklearn.manifold import MDS, SpectralEmbedding, Isomap, TSNE
+import re
+from os import path, makedirs
 
 from graph import get_components, extract_component, floyd_warshall
 
@@ -90,7 +92,7 @@ print(len(eigvals), "total vs.", len(set(eigvals)), "unique\n")  # might cause i
 # issue might simply be sparsity, which conflicts with the default "affinity" parameter of KNN
 
 # %% Plotting
-def plot_2d(data, title, path: str = None, labels=None):
+def plot_2d(data, title, save_to_dir: str = None, labels=None):
     assert data.shape[1] == 2, "Shouldn't do 2 component plot with more than 2 components"
 
     plt.clf()
@@ -99,14 +101,14 @@ def plot_2d(data, title, path: str = None, labels=None):
     ax.set_title(title)
     ax.set_xlabel('Component 1'), ax.set_ylabel('Component 2')
 
-    if path is not None:
-        plt.savefig(path)
+    if save_to_dir:
+        plt.savefig(path.join(save_to_dir, re.sub("[()-]", "", title).replace(" ", "_").lower()))
         plt.show()
     else:
         plt.show()
 
 
-def plot_3d(data, title, path: str = None, labels=None):
+def plot_3d(data, title, save_to_dir: str = None, labels=None):
     assert data.shape[1] == 3, "Shouldn't do 3 component plot with more than 2 components"
 
     plt.clf()
@@ -118,8 +120,8 @@ def plot_3d(data, title, path: str = None, labels=None):
     ax.set_ylabel("Component 2")
     ax.set_zlabel("Component 3")
 
-    if path is not None:
-        plt.savefig(path)
+    if save_to_dir:
+        plt.savefig(path.join(save_to_dir, re.sub("[()-]", "", title).replace(" ", "_").lower()))
         plt.show()
     else:
         plt.show()
@@ -135,6 +137,9 @@ def jitter(data, magnitude: float):
 
 data = dists.to_numpy()
 components = 3
+save_to_dir = "../figures"  # None
+if save_to_dir:
+    makedirs(save_to_dir, exist_ok=True)
 
 mds = MDS(n_components=components)
 mds_embedding = mds.fit_transform(data)
@@ -160,8 +165,8 @@ else:
     raise not NotImplementedError("Just not ready for that, bro")
 
 # need to jitter because many points overlap
-plot(jitter(mds_embedding, 0.5), f"MDS Embedding ({components}D)")
-plot(jitter(iso_embedding, 0.5), f"ISOMAP Embedding ({components}D)")
-plot(jitter(tsne_embedding, 0.1), f"t-SNE Embedding ({components}D)")
-plot(jitter(se_embedding, 0.002), f"Spectral Embedding ({components}D)")
-plot(jitter(pca_reduction, 0.5), f"PCA Reduction ({components}D)")
+plot(jitter(mds_embedding, 0.5), f"MDS Embedding ({components}D)", save_to_dir=save_to_dir)
+plot(jitter(iso_embedding, 0.5), f"ISOMAP Embedding ({components}D)", save_to_dir=save_to_dir)
+plot(jitter(tsne_embedding, 0.1), f"t-SNE Embedding ({components}D)", save_to_dir=save_to_dir)
+plot(jitter(se_embedding, 0.002), f"Spectral Embedding ({components}D)", save_to_dir=save_to_dir)
+plot(jitter(pca_reduction, 0.5), f"PCA Reduction ({components}D)", save_to_dir=save_to_dir)
