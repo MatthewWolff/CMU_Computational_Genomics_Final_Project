@@ -125,10 +125,16 @@ def plot_3d(data, title, path: str = None, labels=None):
         plt.show()
 
 
+def jitter(data, magnitude: float):
+    assert magnitude > 0.
+    mask = np.random.uniform(-magnitude, magnitude, data.shape)
+    return data + mask
+
+
 # %% Manifold Embeddings + PCA
 
 data = dists.to_numpy()
-components = 2
+components = 3
 
 mds = MDS(n_components=components)
 mds_embedding = mds.fit_transform(data)
@@ -146,15 +152,16 @@ pca = PCA(n_components=components)
 pca_reduction = pca.fit_transform(data)
 
 if components == 2:
-    plot_2d(mds_embedding, f"MDS Embedding ({components}D)")
-    plot_2d(iso_embedding, f"ISOMAP Embedding ({components}D)")
-    plot_2d(tsne_embedding, f"t-SNE Embedding ({components}D)")
-    plot_2d(se_embedding, f"Spectral Embedding ({components}D)")
-    plot_2d(pca_reduction, f"PCA Reduction ({components}D)")
+    plot = plot_2d
 elif components == 3:
     dir(mplot3d)  # use the import once so it doesn't get "optimized" out
-    plot_3d(mds_embedding, f"MDS Embedding ({components}D)")
-    plot_3d(iso_embedding, f"ISOMAP Embeddinfg ({components}D)")
-    plot_3d(tsne_embedding, f"t-SNE Embedding ({components}D)")
-    plot_3d(se_embedding, f"Spectral Embedding ({components}D)")
-    plot_3d(pca_reduction, f"PCA Reduction ({components}D)")
+    plot = plot_3d
+else:
+    raise not NotImplementedError("Just not ready for that, bro")
+
+# need to jitter because many points overlap
+plot(jitter(mds_embedding, 0.5), f"MDS Embedding ({components}D)")
+plot(jitter(iso_embedding, 0.5), f"ISOMAP Embedding ({components}D)")
+plot(jitter(tsne_embedding, 0.1), f"t-SNE Embedding ({components}D)")
+plot(jitter(se_embedding, 0.002), f"Spectral Embedding ({components}D)")
+plot(jitter(pca_reduction, 0.5), f"PCA Reduction ({components}D)")
