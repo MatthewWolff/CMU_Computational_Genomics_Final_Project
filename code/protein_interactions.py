@@ -1,5 +1,9 @@
+import heapq
 import re
 from collections import defaultdict
+from functools import partial
+from itertools import combinations
+from operator import itemgetter
 from os import path, makedirs
 from typing import Dict
 
@@ -10,6 +14,7 @@ import seaborn as sns
 from mpl_toolkits import mplot3d
 from sklearn.decomposition import PCA
 from sklearn.manifold import MDS, SpectralEmbedding, Isomap, TSNE
+from sklearn.metrics.pairwise import euclidean_distances
 
 from graph import get_components, extract_component, floyd_warshall
 
@@ -171,17 +176,74 @@ pca = PCA(n_components=components)
 pca_reduction = pca.fit_transform(data)
 plot_component_variance(pca, save_to_dir=save_to_dir)
 
-if components == 2:
-    plot = plot_2d
-elif components == 3:
-    dir(mplot3d)  # use the import once so it doesn't get "optimized" out
-    plot = plot_3d
-else:
-    raise not NotImplementedError("Just not ready for that, bro")
+if components in {2, 3}:
+    if components == 2:
+        plot = plot_2d
+    else:
+        dir(mplot3d)  # use the import once so it doesn't get "optimized" out
+        plot = plot_3d
 
-# need to jitter because many points overlap
-plot(jitter(mds_embedding, 0.5), f"MDS Embedding ({components}D)", save_to_dir=save_to_dir)
-plot(jitter(iso_embedding, 0.5), f"ISOMAP Embedding ({components}D)", save_to_dir=save_to_dir)
-plot(jitter(tsne_embedding, 0.1), f"t-SNE Embedding ({components}D)", save_to_dir=save_to_dir)
-plot(jitter(se_embedding, 0.002), f"Spectral Embedding ({components}D)", save_to_dir=save_to_dir)
-plot(jitter(pca_reduction, 0.5), f"PCA Reduction ({components}D)", save_to_dir=save_to_dir)
+    # need to jitter because many points overlap
+    plot(jitter(mds_embedding, 0.5), f"MDS Embedding ({components}D)", save_to_dir=save_to_dir)
+    plot(jitter(iso_embedding, 0.5), f"ISOMAP Embedding ({components}D)", save_to_dir=save_to_dir)
+    plot(jitter(tsne_embedding, 0.1), f"t-SNE Embedding ({components}D)", save_to_dir=save_to_dir)
+    plot(jitter(se_embedding, 0.002), f"Spectral Embedding ({components}D)", save_to_dir=save_to_dir)
+    plot(jitter(pca_reduction, 0.5), f"PCA Reduction ({components}D)", save_to_dir=save_to_dir)
+
+# %% Similarity Matrices
+# Each manifold embedding method creates an N x N similarity embedding
+# ... except for t-SNE! so we'll just do a euclidean distance matrix
+
+# the identity "similarity" for a protein is 0
+similarities = {
+    "mds": pd.DataFrame(mds.dissimilarity_matrix_, index=dists.index, columns=dists.index),
+    "se": pd.DataFrame(1 - se.affinity_matrix_, index=dists.index, columns=dists.index),  # complement
+    "iso": pd.DataFrame(iso.dist_matrix_, index=dists.index, columns=dists.index),
+    "tsne": pd.DataFrame(euclidean_distances(tsne_embedding), index=dists.index, columns=dists.index),  # proxy?
+}
+
+# %% Calculate Interacting Reliability Index
+
+n_ave = average_neighbors = np.mean(list(map(len, network.values())))
+
+
+def reliability_index(protein1: str, protein2: str, epsilon: float, method: str) -> float:
+    """
+    Functional Similarity Weight Index - FSWeight. Used for Reliability Index
+    :param protein1:
+    :param protein2:
+    :param epsilon: a similarity threshold
+    :param method: the method used to generate the similarity threshold
+    :return: the Reliability Index for this protein pair
+    """
+    assert method in similarities.keys(), f"unknown similarity method. Options are: {', '.join(similarities.keys())}"
+
+    similarity = similarities[method][protein1][protein2]
+    if similarity > epsilon:
+        return 0.
+
+    # store for multiple use
+    nx, ny = neighbors_x, neighbors_x = network[protein1], network[protein2]
+    nx_cap_ny = len(nx & ny)
+    nx_minus_ny, ny_minus_nx = len(nx - ny), len(ny - nx)
+    lambda_xy, lambda_yx = max(0, n_ave - (nx_minus_ny + nx_cap_ny)), max(0, n_ave - (ny_minus_nx + nx_cap_ny))
+
+    term1 = 2 * nx_cap_ny / (nx_minus_ny + 2 * nx_cap_ny + lambda_xy)
+    term2 = 2 * nx_cap_ny / (ny_minus_nx + 2 * nx_cap_ny + lambda_yx)
+    return term1 * term2
+
+
+n = 20  # number of most likely protein pairings to retrieve
+
+similarity_method = "mds"
+threshold = 3  # each embedding will have a different scale for the similarities
+ri = partial(reliability_index, epsilon=threshold, method=similarity_method)
+
+protein_pairs = combinations(network.keys(), 2)
+rankings = (((p1, p2), ri(p1, p2)) for p1, p2 in protein_pairs)
+top_n = heapq.nlargest(n, rankings, key=itemgetter(1))  # avoid sorting everything
+
+print(f"Reliability Index - Top {n} Pairings:")
+print(*[f"\t{', '.join(k)} - RI: {v}" for k, v in top_n], sep="\n")
+
+# %% Evaluating Network Recovery
