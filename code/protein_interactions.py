@@ -2,11 +2,12 @@ from collections import defaultdict
 from typing import Dict
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import seaborn as sns
 from mpl_toolkits import mplot3d
 from sklearn.decomposition import PCA
-from sklearn.manifold import MDS, Isomap, TSNE
+from sklearn.manifold import MDS, SpectralEmbedding, Isomap, TSNE
 
 from graph import get_components, extract_component, floyd_warshall
 
@@ -79,8 +80,14 @@ new_graph = dict()
 for col in dists.columns:
     new_graph[col] = set(dists.index[dists[col] != 0])
 
-assert len(get_components(new_graph)) == 1
+assert len(get_components(new_graph)) == 1, "more than 1 component"
 
+eigvals, eigvects = np.linalg.eigh(dists)
+print("Unique Eigenvalues:", len(eigvals) == len(set(eigvals)))
+print(len(eigvals), "total vs.", len(set(eigvals)), "unique\n")  # might cause issue for spectral embedding?
+
+
+# issue might simply be sparsity, which conflicts with the default "affinity" parameter of KNN
 
 # %% Plotting
 def plot_2d(data, title, path: str = None, labels=None):
@@ -121,13 +128,13 @@ def plot_3d(data, title, path: str = None, labels=None):
 # %% Manifold Embeddings + PCA
 
 data = dists.to_numpy()
-components = 3
+components = 2
 
 mds = MDS(n_components=components)
 mds_embedding = mds.fit_transform(data)
 
-# se = SpectralEmbedding(n_components=components) # must be fully connected graph... or else error
-# se_embedding = se.fit_transform(data)
+se = SpectralEmbedding(n_components=components, affinity="rbf")
+se_embedding = se.fit_transform(data)
 
 iso = Isomap(n_components=components)
 iso_embedding = iso.fit_transform(data)
@@ -142,12 +149,12 @@ if components == 2:
     plot_2d(mds_embedding, f"MDS Embedding ({components}D)")
     plot_2d(iso_embedding, f"ISOMAP Embedding ({components}D)")
     plot_2d(tsne_embedding, f"t-SNE Embedding ({components}D)")
-    # plot_2d(se_embedding, f"Spectral Embedding ({components}D)")
+    plot_2d(se_embedding, f"Spectral Embedding ({components}D)")
     plot_2d(pca_reduction, f"PCA Reduction ({components}D)")
 elif components == 3:
     dir(mplot3d)  # use the import once so it doesn't get "optimized" out
     plot_3d(mds_embedding, f"MDS Embedding ({components}D)")
     plot_3d(iso_embedding, f"ISOMAP Embeddinfg ({components}D)")
     plot_3d(tsne_embedding, f"t-SNE Embedding ({components}D)")
-    # plot_3d(se_embedding, f"Spectral Embedding ({components}D)")
+    plot_3d(se_embedding, f"Spectral Embedding ({components}D)")
     plot_3d(pca_reduction, f"PCA Reduction ({components}D)")
