@@ -59,8 +59,8 @@ node_from_largest = max(components.items(), key=lambda x: x[1])[0]
 network = extract_component(g, node_from_component=node_from_largest)
 
 print("disconnected components in graph:", len(components))
-print(f"largest component: {largest_network_size} out of {len(data)} nodes "
-      f"({round(largest_network_size / len(data) * 100, 3)}%)")
+print(f"largest component: {largest_network_size} out of {len(proteins)} nodes "
+      f"({round(largest_network_size / len(proteins) * 100, 3)}%)")
 print("Example Network:")
 print(*list(network.items())[:5], sep="\n", end="\n\n")
 
