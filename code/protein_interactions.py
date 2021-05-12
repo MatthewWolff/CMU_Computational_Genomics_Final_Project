@@ -134,7 +134,7 @@ def plot_3d(data, title, save_to_dir: str = None, labels=None):
 
 def plot_component_variance(fitted_pca, save_to_dir: str = None):
     plt.figure()
-    ax = sns.barplot(x=["Component %d" % d for d in range(fitted_pca.n_components)],
+    ax = sns.barplot(x=["Component %d" % d for d in range(1, fitted_pca.n_components + 1)],
                      y=fitted_pca.explained_variance_ratio_)
     ax.set_title("PCA - Proportion of Variance Explained per Component")
     if save_to_dir:
@@ -245,5 +245,3 @@ top_n = heapq.nlargest(n, rankings, key=itemgetter(1))  # avoid sorting everythi
 
 print(f"Reliability Index - Top {n} Pairings:")
 print(*[f"\t{', '.join(k)} - RI: {v}" for k, v in top_n], sep="\n")
-
-# %% Evaluating Network Recovery
