@@ -233,14 +233,23 @@ def reliability_index(protein1: str, protein2: str, epsilon: float, method: str)
     return term1 * term2
 
 
-n = 20  # number of most likely protein pairings to retrieve
+n = 5  # number of most likely protein pairings to retrieve
 
 similarity_method = "mds"
 threshold = 3  # each embedding will have a different scale for the similarities
 ri = partial(reliability_index, epsilon=threshold, method=similarity_method)
 
 protein_pairs = combinations(network.keys(), 2)
-rankings = (((p1, p2), ri(p1, p2)) for p1, p2 in protein_pairs)
+rankings = (((p1, p2), val) for p1, p2 in protein_pairs if (val := ri(p1, p2)) != 0)
+top_n = heapq.nsmallest(n, rankings, key=itemgetter(1))  # avoid sorting everything
+
+print(f"Reliability Index - Bottom {n} Pairings:")
+print(*[f"\t{', '.join(k)} - RI: {v}" for k, v in top_n], sep="\n")
+print()
+
+# duplicated, but whatever
+protein_pairs = combinations(network.keys(), 2)
+rankings = (((p1, p2), val) for p1, p2 in protein_pairs if (val := ri(p1, p2)) != 0)
 top_n = heapq.nlargest(n, rankings, key=itemgetter(1))  # avoid sorting everything
 
 print(f"Reliability Index - Top {n} Pairings:")
